@@ -1,13 +1,13 @@
 "use client";
 
 import React from "react";
-import ResponseChart from "../../components/chat/ResponseChart";
-import ResponseInsights from "../../components/chat/ResponseInsights";
-import ResponseTable from "../../components/chat/ResponseTable";
+import ResponseChart from "../../components/response/ResponseChart";
+import ResponseInsights from "../../components/response/ResponseInsights";
+import ResponseTable from "../../components/response/ResponseTable";
 import MessageInput from "../../components/chat/MessageInput";
 import { Download, RotateCcw, ThumbsUp, ThumbsDown, Plus, UserCircle } from "lucide-react";
 
-export default function VisualCanvas() {
+export default function   VisualCanvas() {
   const handleSendMessage = (message: string) => {
     console.log("Message sent:", message);
   };
@@ -15,6 +15,7 @@ export default function VisualCanvas() {
   const handleNewChat = () => {
     console.log("New chat started");
     // if you want to reset messages or title, handle it here later
+    
   };
 
   return (
