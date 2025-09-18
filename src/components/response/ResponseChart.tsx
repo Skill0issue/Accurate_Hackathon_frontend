@@ -1,11 +1,15 @@
-"use client";
-
 import React from "react";
 
-export default function ResponseChart() {
-  return (
-    <div className="flex-1 flex items-center justify-center h-48 border rounded-xl border-gray-200 bg-white">
-      <span className="text-gray-400">Map Chart Placeholder</span>
-    </div>
-  );
+interface ResponseChartProps {
+    url: string;
 }
+
+const ResponseChart: React.FC<ResponseChartProps> = ({ url }) => {
+    return (
+        <div className="flex-1 flex items-center justify-center h-48 border rounded-xl border-gray-200 bg-white">
+            <img src={url} alt="Response Chart" className="w-full h-full object-contain" />
+        </div>
+    );
+};
+
+export default ResponseChart;

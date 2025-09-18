@@ -1,7 +1,7 @@
 import React from 'react';
 import { CanvasData, MessagePart } from '../chat/types';
-import ChartRenderer from '../chat/renderers/ChartRenderer';
-import { TableRenderer } from '../chat/renderers/TableRenderer';
+import ResponseChart from '../response/ResponseChart';
+import ResponseTable from '../response/ResponseTable';
 import { KeyInsights } from './KeyInsights';
 import { SummaryStats } from './SummaryStats';
 
@@ -40,11 +40,10 @@ export const VisualCanvas: React.FC<VisualCanvasProps> = ({ data }) => {
 // Helper to render different message part types
 const renderContentPart = (part: MessagePart) => {
   switch (part.type) {
-    case 'chart':
-      return <ChartRenderer data={part.data} />;
+    case 'chart_image':
+      return <ResponseChart url={part.url} />;
     case 'table':
-      return <TableRenderer data={part.data} />;
-    // Add other content types here if needed
+      return <ResponseTable data={part.data} />;
     default:
       return null;
   }
