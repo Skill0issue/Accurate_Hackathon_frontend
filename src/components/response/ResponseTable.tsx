@@ -1,37 +1,44 @@
-"use client";
+import React from 'react';
+import { TableData } from '../chat/types';
 
-import React from "react";
+interface ResponseTableProps {
+  data: TableData;
+}
 
-const data = [
-  { region: "West Coast", total: 2456, disputes: 295, rate: "12%" },
-  { region: "East Coast", total: 3123, disputes: 250, rate: "8%" },
-  { region: "Midwest", total: 1789, disputes: 107, rate: "6%" },
-  { region: "Southwest", total: 1345, disputes: 121, rate: "9%" },
-];
-
-export default function ResponseTable() {
+const ResponseTable: React.FC<ResponseTableProps> = ({ data }) => {
   return (
-    <div className="mt-6 overflow-hidden rounded-xl border border-gray-200">
-      <table className="w-full text-sm text-left">
-        <thead className="bg-gray-50 text-gray-600">
+    <div className="mt-6 overflow-hidden rounded-xl border border-gray-200 shadow-sm">
+      <table className="min-w-full divide-y divide-gray-200">
+        <thead className="bg-gray-50">
           <tr>
-            <th className="px-4 py-2">Region</th>
-            <th className="px-4 py-2">Total Cases</th>
-            <th className="px-4 py-2">Disputes</th>
-            <th className="px-4 py-2">Rate</th>
+            {data.headers.map((header, index) => (
+              <th
+                key={index}
+                scope="col"
+                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+              >
+                {header}
+              </th>
+            ))}
           </tr>
         </thead>
-        <tbody className="divide-y divide-gray-200 bg-white">
-          {data.map((row, i) => (
-            <tr key={i}>
-              <td className="px-4 py-2">{row.region}</td>
-              <td className="px-4 py-2">{row.total.toLocaleString()}</td>
-              <td className="px-4 py-2">{row.disputes}</td>
-              <td className="px-4 py-2">{row.rate}</td>
+        <tbody className="bg-white divide-y divide-gray-200">
+          {data.rows.map((row, rowIndex) => (
+            <tr key={rowIndex}>
+              {row.map((cell, cellIndex) => (
+                <td
+                  key={cellIndex}
+                  className="px-6 py-4 whitespace-nowrap text-sm text-gray-900"
+                >
+                  {cell}
+                </td>
+              ))}
             </tr>
           ))}
         </tbody>
       </table>
     </div>
   );
-}
+};
+
+export default ResponseTable;

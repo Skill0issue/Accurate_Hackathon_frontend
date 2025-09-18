@@ -1,29 +1,23 @@
-"use client";
-
 import React from "react";
 import ResponseHeader from "./ResponseHeader";
-import ResponseChart from "./ResponseChart";
-import ResponseInsights from "./ResponseInsights";
-import ResponseTable from "./ResponseTable";
 import ResponseFooter from "./ResponseFooter";
+import { MessagePart } from "../chat/types";
+import FormattedResponse from "./FormattedResponse";
 
-const ResponseCard: React.FC = () => {
+interface Props {
+  parts: MessagePart[];
+  onOpenCanvas: () => void;
+}
+
+const ResponseCard: React.FC<Props> = ({ parts, onOpenCanvas }) => {
+  const isCanvasAvailable = parts.some(
+    (part) => part.type === "table" || part.type === "chart_image"
+  );
   return (
     <div className="bg-white shadow-md rounded-2xl p-6 w-full max-w-4xl mx-auto space-y-6">
-      {/* Header */}
-      <ResponseHeader />
-
-      {/* Chart + Insights */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <ResponseChart />
-        <ResponseInsights />
-      </div>
-
-      {/* Table */}
-      <ResponseTable />
-
-      {/* Footer actions */}
-      <ResponseFooter />
+      <ResponseHeader text="Summary" />
+      <FormattedResponse content={parts} />
+      <ResponseFooter isCanvas={isCanvasAvailable} onOpenCanvas={onOpenCanvas} />
     </div>
   );
 };

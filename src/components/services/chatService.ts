@@ -1,4 +1,5 @@
 import { AssistantTurn, PlanStep } from "@/components/chat/streamTypes";
+import { AssistantCanvasData } from "@/components/chat/types";
 
 /**
  * Defines the set of callbacks that the UI can provide to handle
@@ -86,6 +87,12 @@ export function streamAgenticResponse(prompt: string, callbacks: StreamingCallba
   eventSource.addEventListener("final_response", (event) => {
     const data = JSON.parse(event.data);
     currentTurn.finalResponse = data.text;
+    
+    // Check if the payload contains canvas data and assign it to the turn
+    if (data.iscanvas) {
+      currentTurn.canvasData = data as AssistantCanvasData;
+    }
+    
     updateAndNotify();
   });
 
@@ -106,4 +113,3 @@ export function streamAgenticResponse(prompt: string, callbacks: StreamingCallba
     eventSource.close();
   };
 }
-
