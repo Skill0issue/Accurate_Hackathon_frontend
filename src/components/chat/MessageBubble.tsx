@@ -1,8 +1,8 @@
 "use client";
 import React from "react";
-import ResponseHeader from "./ResponseHeader";
-import ResponseFooter from "./ResponseFooter";
-import ThinkingComponent, { ThinkingData } from "./ThinkingDropDown"; // Import the thinking component and types
+import ResponseHeader from "../response/ResponseHeader";
+import ResponseFooter from "../response/ResponseFooter";
+import ThinkingComponent, { ThinkingData } from "../response/ThinkingDropDown"; // Import the thinking component and types
 
 export type ChatMessage = {
   id?: string;
