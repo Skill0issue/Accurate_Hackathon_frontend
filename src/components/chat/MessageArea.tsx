@@ -48,19 +48,13 @@ const MessageArea: React.FC<MessageAreaProps> = ({ messages, onOpenCanvas, isCan
                   );
                 }
                 if (part.type === 'agentic_turn') {
-                  return <AgenticResponse key={partIndex} turn={part.data} />;
+                  return <AgenticResponse key={partIndex} turn={part.data} onOpenCanvas={onOpenCanvas} />;
                 }
                 return null;
               })}
             </div>
             
             <p className={`text-xs mt-1 ${msg.role === 'user' ? 'text-right w-full pr-12' : 'text-left pl-12'} text-gray-400`}>{msg.time}</p>
-            
-            {msg.role === 'assistant' && isLastMessage && isCanvasAvailable && (
-              <button onClick={onOpenCanvas} className="ml-11 mt-2 flex items-center gap-2 text-sm text-blue-600 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-lg transition-colors">
-                <Layers size={14}/> Open in Canvas
-              </button>
-            )}
           </div>
         )
       })}
@@ -69,4 +63,3 @@ const MessageArea: React.FC<MessageAreaProps> = ({ messages, onOpenCanvas, isCan
 };
 
 export default MessageArea;
-

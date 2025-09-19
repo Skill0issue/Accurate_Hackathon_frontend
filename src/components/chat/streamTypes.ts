@@ -37,6 +37,5 @@ export interface AssistantTurn {
   finalResponse: string | null;
   isComplete: boolean;
   error?: string;
-  // NEW: Add the canvasData property
   canvasData?: AssistantCanvasData;
 }

@@ -23,7 +23,11 @@ const ResponseText: React.FC<Props> = ({ header, text, isCanvas, onOpenCanvas })
       </div>
       <div className="my-3 border-t border-gray-200" />
       {/* 2. Pass the props down to the ResponseFooter */}
-      <ResponseFooter isCanvas={isCanvas} onOpenCanvas={onOpenCanvas} />
+      {/* <ResponseFooter isCanvas={isCanvas} onOpenCanvas={onOpenCanvas} /> */}
+      <ResponseFooter
+        isCanvas={isCanvas && !!text}  // ensure text exists too
+        onOpenCanvas={onOpenCanvas}
+      />
     </div>
   );
 };

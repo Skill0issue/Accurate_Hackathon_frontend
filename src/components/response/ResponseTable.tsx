@@ -6,12 +6,23 @@ interface ResponseTableProps {
 }
 
 const ResponseTable: React.FC<ResponseTableProps> = ({ data }) => {
+  const headers = data?.headers || [];
+  const rows = data?.rows || [];
+
+  if (!headers.length || !rows.length) {
+    return (
+      <div className="mt-6 p-4 rounded-xl border border-gray-200 bg-white text-sm text-gray-500">
+        No table data available.
+      </div>
+    );
+  }
+
   return (
     <div className="mt-6 overflow-hidden rounded-xl border border-gray-200 shadow-sm">
       <table className="min-w-full divide-y divide-gray-200">
         <thead className="bg-gray-50">
           <tr>
-            {data.headers.map((header, index) => (
+            {headers.map((header, index) => (
               <th
                 key={index}
                 scope="col"
@@ -23,7 +34,7 @@ const ResponseTable: React.FC<ResponseTableProps> = ({ data }) => {
           </tr>
         </thead>
         <tbody className="bg-white divide-y divide-gray-200">
-          {data.rows.map((row, rowIndex) => (
+          {rows.map((row, rowIndex) => (
             <tr key={rowIndex}>
               {row.map((cell, cellIndex) => (
                 <td
