@@ -59,8 +59,8 @@ export default function DashboardPage() {
 
     const [isSidebarOpen, setIsSidebarOpen] = useState(true);
     // State for live orders, loading status, and potential errors
-    const [orders, setOrders] = useState<Order[]>(sampleOrders);
-    const [isLoading, setIsLoading] = useState(true);
+    const [orders, setOrders] = useState<Order[]>([]);
+    const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
     const handleToggleSidebar = () => setIsSidebarOpen((prev) => !prev);
@@ -84,7 +84,9 @@ export default function DashboardPage() {
     // Dynamically calculate stats from the live order data
     const totalOrders = orders.length;
     const inProgressOrders = orders.filter(o => o.order_status === 'in_progress').length;
+    const pendingOrders = orders.filter(o => o.order_status === 'pending').length;
     const completedOrders = orders.filter(o => o.order_status === 'completed').length;
+    const cancelledOrders = orders.filter(o => o.order_status === 'cancelled').length;
 
     return (
         <div className="flex flex-col min-h-screen bg-gray-50">
@@ -98,10 +100,12 @@ export default function DashboardPage() {
                     </p>
 
                     {/* Info Cards now show calculated values from live data */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                        <OrderDetails title="Total Orders" value={totalOrders} icon={<ListChecks className="text-blue-600" />} color="bg-blue-100" />
-                        <OrderDetails title="In Progress" value={inProgressOrders} icon={<Clock className="text-yellow-600" />} color="bg-yellow-100" />
+                    <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-5 gap-6">
+                        <OrderDetails title="Total Orders" value={totalOrders} icon={<ListChecks className="text-purple-600" />} color="bg-purple-100" />
+                        <OrderDetails title="In Progress" value={inProgressOrders} icon={<Clock className="text-blue-600" />} color="bg-blue-100" />
+                        <OrderDetails title="Pending" value={pendingOrders} icon={<Clock className="text-yellow-600" />} color="bg-yellow-100" />
                         <OrderDetails title="Completed" value={completedOrders} icon={<CheckCircle2 className="text-green-600" />} color="bg-green-100" />
+                        <OrderDetails title="cancelled" value={cancelledOrders} icon={<CheckCircle2 className="text-gray-600" />} color="bg-gray-100" />
                     </div>
 
                     {/* Recent Orders Table Container */}
