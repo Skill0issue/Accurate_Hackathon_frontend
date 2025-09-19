@@ -1,5 +1,4 @@
 import React from "react";
-import ResponseCard from "./ResponseCard";
 import ResponseHeader from "./ResponseHeader";
 import ResponseFooter from "./ResponseFooter";
 import ResponseText from "./ResponseText";
@@ -11,6 +10,9 @@ interface Props {
   onOpenCanvas: () => void;
   isCanvasAvailable: boolean;
 }
+
+
+
 
 const ResponseMessage: React.FC<Props> = ({
   message,
@@ -29,14 +31,14 @@ const ResponseMessage: React.FC<Props> = ({
               >
                 <div className="text-sm text-gray-700">{part.content}</div>
                 <div className="my-3 border-t border-gray-200" />
-                <ResponseFooter
+                {/* <ResponseFooter
                   isCanvas={isCanvasAvailable}
                   onOpenCanvas={onOpenCanvas}
-                />
+                /> */}
               </div>
             );
           case "agentic_turn":
-            return <AgenticResponse key={index} turn={part.data} />;
+            return <AgenticResponse key={index} turn={part.data} onOpenCanvas={onOpenCanvas}/>;
           default:
             return null;
         }

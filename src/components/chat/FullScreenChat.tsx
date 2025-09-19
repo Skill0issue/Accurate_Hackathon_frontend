@@ -19,7 +19,7 @@ export const FullScreenChat = ({
   session, 
   onMinimize, 
   onSend, 
-  onOpenCanvas, 
+  onOpenCanvas,  
   isCanvasAvailable, 
   isLoading, 
   children 

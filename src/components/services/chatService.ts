@@ -84,15 +84,50 @@ export function streamAgenticResponse(prompt: string, callbacks: StreamingCallba
     updateAndNotify();
   });
 
+  // Final response contains chat-visible text only
   eventSource.addEventListener("final_response", (event) => {
-    const data = JSON.parse(event.data);
-    currentTurn.finalResponse = data.text;
-    
-    // Check if the payload contains canvas data and assign it to the turn
-    if (data.iscanvas) {
-      currentTurn.canvasData = data as AssistantCanvasData;
+    try {
+      const data = JSON.parse(event.data);
+      // backend sends { text: string }
+      currentTurn.finalResponse = typeof data === "object" && data.text ? data.text : String(data);
+    } catch (err) {
+      currentTurn.finalResponse = event.data as unknown as string;
     }
-    
+    updateAndNotify();
+  });
+
+  // Canvas flag (boolean decision) - backend emits a lightweight "canvas" event
+  eventSource.addEventListener("canvas", (event) => {
+    try {
+      const data = JSON.parse(event.data) as { iscanvas?: boolean };
+      // store a quick decision flag on the turn (optional)
+      (currentTurn as any).canvasFlag = Boolean(data?.iscanvas);
+    } catch (err) {
+      (currentTurn as any).canvasFlag = false;
+    }
+    updateAndNotify();
+  });
+
+  // Full structured canvas payload (this is where charts/table/insights arrive)
+  eventSource.addEventListener("final_payload", (event) => {
+    try {
+      const payload = JSON.parse(event.data) as AssistantCanvasData;
+      // assign the complete payload so UI can render the Visual Canvas
+      currentTurn.canvasData = payload;
+    } catch (err) {
+      console.warn("Failed to parse final_payload", err);
+    }
+    updateAndNotify();
+  });
+
+  // Assets bundle (plot paths / charts)
+  eventSource.addEventListener("assets", (event) => {
+    try {
+      const payload = JSON.parse(event.data);
+      (currentTurn as any).assets = payload;
+    } catch (err) {
+      (currentTurn as any).assets = null;
+    }
     updateAndNotify();
   });
 
