@@ -9,9 +9,12 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@microsoft/fetch-event-source": "^2.0.1",
     "@tanstack/react-query": "^5.89.0",
+    "axios": "^1.12.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "eventsource-parser": "^3.0.6",
     "framer-motion": "^12.23.15",
     "highlight.js": "^11.11.1",
     "imagekitio-react": "^4.3.0",

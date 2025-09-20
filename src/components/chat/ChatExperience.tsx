@@ -18,12 +18,12 @@ const transformToCanvasData = (data: AssistantCanvasData | null): CanvasData | n
 
   const mainContent: MessagePart[] = [];
 
-  const backendBase = (typeof process !== "undefined" && process.env.NEXT_PUBLIC_FLASK_BACKEND_URL) || "";
+  const backendBase = (typeof process !== "undefined" && (process.env.NEXT_PUBLIC_FLASK_BACKEND_URL)) || "";
 
   const resolveChartUrl = (rawUrl: string) => {
     if (!rawUrl) return rawUrl;
     if (rawUrl.startsWith("http") || rawUrl.startsWith("data:image")) return rawUrl;
-    const looksLikePath = rawUrl.startsWith("/") || rawUrl.includes("/static/");
+    const looksLikePath = rawUrl.startsWith("/") || rawUrl.includes("/static/plots/");
     if (looksLikePath) {
       const base = backendBase || (typeof window !== "undefined" ? window.location.origin : "");
       return base ? `${base.replace(/\/$/, "")}/${rawUrl.replace(/^\//, "")}` : rawUrl;
@@ -143,7 +143,7 @@ export default function ChatExperience() {
         const finalMessage: ChatMessage = {
           role: "assistant",
           time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-          parts: [{ type: "agentic_turn", data: turn }],
+          parts: [{ type: "markdown", content: turn.finalResponse || "No response." }], // Changed to markdown
         };
 
         if (turn.canvasData) {
