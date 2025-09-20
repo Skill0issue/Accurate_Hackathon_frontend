@@ -21,7 +21,7 @@ export const NewChatInput: React.FC<NewChatInputProps> = ({ onSend }) => {
   };
 
   return (
-    <div className="relative flex items-center w-full max-w-4xl bg-white rounded-full shadow-md shadow-gray-500 p-2">
+    <div className="relative flex items-center w-full mx-auto bg-white rounded-full shadow-md shadow-gray-500 p-2">
       <MessageSquare className="absolute left-5 h-6 w-6 text-blue-500" />
       <input
         type="text"

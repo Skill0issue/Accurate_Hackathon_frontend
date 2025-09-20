@@ -1,27 +1,15 @@
+import { fetchEventSource } from "@microsoft/fetch-event-source";
 import { AssistantTurn, PlanStep } from "@/components/chat/streamTypes";
 import { AssistantCanvasData } from "@/components/chat/types";
 
-/**
- * Defines the set of callbacks that the UI can provide to handle
- * the different events streamed from the backend.
- */
 export interface StreamingCallbacks {
   onUpdate: (turn: AssistantTurn) => void;
   onComplete: (turn: AssistantTurn) => void;
   onError: (error: Error) => void;
 }
 
-/**
- * Connects to the backend's SSE endpoint and processes the agentic workflow stream.
- *
- * @param prompt The user's query.
- * @param callbacks An object of functions to handle updates, completion, and errors.
- * @returns A function to gracefully close the connection.
- */
 export function streamAgenticResponse(prompt: string, callbacks: StreamingCallbacks) {
-  const eventSource = new EventSource(`/api/chat?prompt=${encodeURIComponent(prompt)}`);
-
-  let currentTurn: AssistantTurn = {
+  const currentTurn: AssistantTurn = {
     id: `turn_${Date.now()}`,
     plan: null,
     agentSteps: [],
@@ -29,122 +17,118 @@ export function streamAgenticResponse(prompt: string, callbacks: StreamingCallba
     isComplete: false,
   };
 
-  const updateAndNotify = () => {
-    callbacks.onUpdate({ ...currentTurn });
-  };
+  const updateAndNotify = () => callbacks.onUpdate({ ...currentTurn });
+  const user_role = "company_admin";
+  const company_name = "Rodriguez, Figueroa and Sanchez";
+  let closed = false;
+  fetchEventSource("http://localhost:8000/query-stream", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "text/event-stream",
+      // "Authorization": `Bearer ${authToken}`
+    },
+    body: JSON.stringify({
+      query: prompt,
+      save_history: true,
+      user_role: user_role,
+      company_name : company_name
+    }),
+    async onopen(response) {
+      if (response.ok) {
+        console.log("SSE connection established");
+      } else {
+        throw new Error(`Failed to connect: ${response.statusText}`);
+      }
+    },
+    onmessage(msg) {
+      console.log(msg)
+      try {
+        const eventType = msg.event || "message";
+        const parsedData = msg.data ? JSON.parse(msg.data) : null;
 
-  eventSource.addEventListener("plan", (event) => {
-    const data = JSON.parse(event.data);
-    currentTurn.plan = data.steps;
-    // Initialize agent steps based on the plan
-    currentTurn.agentSteps = (data.steps as PlanStep[]).map((step, index) => ({
-      index: index + 1,
-      agent: step.agent,
-      query: step.query,
-      status: "pending",
-    }));
-    updateAndNotify();
+        switch (eventType) {
+          case "plan":
+            currentTurn.plan = parsedData.steps;
+            currentTurn.agentSteps = (parsedData.steps as PlanStep[]).map((step, index) => ({
+              index: index + 1,
+              agent: step.agent,
+              query: step.query,
+              status: "pending",
+            }));
+            break;
+          case "agent_start":
+            {
+              const step = currentTurn.agentSteps.find(s => s.index === parsedData.index);
+              if (step) step.status = "running";
+            }
+            break;
+          case "agent_code":
+            {
+              const step = currentTurn.agentSteps.find(s => s.index === parsedData.index);
+              if (step) step.code = { language: parsedData.language, code: parsedData.code };
+            }
+            break;
+          case "agent_output":
+            {
+              const step = currentTurn.agentSteps.find(s => s.index === parsedData.index);
+              if (step) {
+                step.status = "completed";
+                step.output = parsedData.output ?? parsedData.preview;
+              }
+            }
+            break;
+          case "agent_error":
+            {
+              const step = currentTurn.agentSteps.find(s => s.index === parsedData.index);
+              if (step) {
+                step.status = "error";
+                step.error = parsedData.message;
+              }
+            }
+            break;
+          case "final_response":
+            currentTurn.finalResponse =
+              typeof parsedData === "object" && parsedData.text ? parsedData.text : String(parsedData);
+            break;
+          case "canvas":
+            (currentTurn as any).canvasFlag = Boolean(parsedData?.iscanvas);
+            break;
+          case "final_payload":
+            currentTurn.canvasData = parsedData as AssistantCanvasData;
+            break;
+          case "assets":
+            (currentTurn as any).assets = parsedData;
+            break;
+          case "done":
+            currentTurn.isComplete = true;
+            callbacks.onComplete(currentTurn);
+            closed = true;
+            break;
+          case "error":
+            callbacks.onError(new Error(parsedData.message || "Unknown error"));
+            closed = true;
+            break;
+        }
+        updateAndNotify();
+      } catch (err) {
+        console.error("Parse error:", err);
+      }
+    },
+    onerror(err) {
+      console.error("SSE failed:", err);
+      callbacks.onError(err instanceof Error ? err : new Error(String(err)));
+      closed = true;
+    },
+    async onclose() {
+      if (!closed) {
+        console.warn("SSE closed unexpectedly");
+      }
+    },
+    openWhenHidden: true, // optional
   });
 
-  eventSource.addEventListener("agent_start", (event) => {
-    const data = JSON.parse(event.data);
-    const step = currentTurn.agentSteps.find(s => s.index === data.index);
-    if (step) {
-      step.status = "running";
-    }
-    updateAndNotify();
-  });
-  
-  eventSource.addEventListener("agent_code", (event) => {
-    const data = JSON.parse(event.data);
-    const step = currentTurn.agentSteps.find(s => s.index === data.index);
-    if (step) {
-      step.code = { language: data.language, code: data.code };
-    }
-    updateAndNotify();
-  });
-
-  eventSource.addEventListener("agent_output", (event) => {
-    const data = JSON.parse(event.data);
-    const step = currentTurn.agentSteps.find(s => s.index === data.index);
-    if (step) {
-      step.status = "completed";
-      step.output = data.output ?? data.preview;
-    }
-    updateAndNotify();
-  });
-
-  eventSource.addEventListener("agent_error", (event) => {
-    const data = JSON.parse(event.data);
-    const step = currentTurn.agentSteps.find(s => s.index === data.index);
-    if (step) {
-      step.status = "error";
-      step.error = data.message;
-    }
-    updateAndNotify();
-  });
-
-  // Final response contains chat-visible text only
-  eventSource.addEventListener("final_response", (event) => {
-    try {
-      const data = JSON.parse(event.data);
-      // backend sends { text: string }
-      currentTurn.finalResponse = typeof data === "object" && data.text ? data.text : String(data);
-    } catch (err) {
-      currentTurn.finalResponse = event.data as unknown as string;
-    }
-    updateAndNotify();
-  });
-
-  // Canvas flag (boolean decision) - backend emits a lightweight "canvas" event
-  eventSource.addEventListener("canvas", (event) => {
-    try {
-      const data = JSON.parse(event.data) as { iscanvas?: boolean };
-      // store a quick decision flag on the turn (optional)
-      (currentTurn as any).canvasFlag = Boolean(data?.iscanvas);
-    } catch (err) {
-      (currentTurn as any).canvasFlag = false;
-    }
-    updateAndNotify();
-  });
-
-  // Full structured canvas payload (this is where charts/table/insights arrive)
-  eventSource.addEventListener("final_payload", (event) => {
-    try {
-      const payload = JSON.parse(event.data) as AssistantCanvasData;
-      // assign the complete payload so UI can render the Visual Canvas
-      currentTurn.canvasData = payload;
-    } catch (err) {
-      console.warn("Failed to parse final_payload", err);
-    }
-    updateAndNotify();
-  });
-
-  // Assets bundle (plot paths / charts)
-  eventSource.addEventListener("assets", (event) => {
-    try {
-      const payload = JSON.parse(event.data);
-      (currentTurn as any).assets = payload;
-    } catch (err) {
-      (currentTurn as any).assets = null;
-    }
-    updateAndNotify();
-  });
-
-  eventSource.addEventListener("done", () => {
-    currentTurn.isComplete = true;
-    callbacks.onComplete(currentTurn);
-    eventSource.close();
-  });
-  
-  eventSource.onerror = (err) => {
-    console.error("EventSource failed:", err);
-    callbacks.onError(new Error("Connection to the streaming service was lost."));
-    eventSource.close();
-  };
-  
-  // Return a cleanup function
   return () => {
-    eventSource.close();
+    closed = true;
   };
 }
