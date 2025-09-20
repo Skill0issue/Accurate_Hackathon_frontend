@@ -34,7 +34,7 @@ export default function Header({ onToggleSidebar }: { onToggleSidebar: () => voi
             className="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-100 transition"
           >
             <User className="h-5 w-5 text-gray-700" />
-            <span className="hidden md:block">John Doe</span>
+            <span className="hidden md:block">John wick</span>
           </button>
 
           {isProfileOpen && (

@@ -1,23 +1,11 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
-import { Eye, Edit, Search, X } from "lucide-react";
-
-// --- TYPES (Included for a self-contained component) ---
-// This would typically be in a separate types.ts file
-type OrderStatus = "in_progress" | "completed" | "pending" | "cancelled";
-type OrderPriority = "high" | "medium" | "low" | "urgent";
-
-export interface Order {
-  id: string;
-  company_name: string;
-  order_status: OrderStatus;
-  candidate_count: number;
-  priority: OrderPriority;
-  cost: number;
-  currency: string;
-  due_date: string;
-}
+import React, { useState, useMemo, Fragment } from "react";
+import { Search, X, ChevronDown } from "lucide-react";
+// NEW: Import the SubOrdersTable component
+import SubOrdersTable from "./SubOrdersTable"; 
+// Import types from your central types file
+import { OrderStatus, OrderPriority, Order, SubOrder } from "./types";
 
 // --- STYLES ---
 const statusColors: Record<OrderStatus, string> = {
@@ -65,8 +53,18 @@ const OrdersTable: React.FC<OrdersTableProps> = ({ orders }) => {
   const [customerFilter, setCustomerFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState<OrderStatus | "">("");
   const [priorityFilter, setPriorityFilter] = useState<OrderPriority | "">("");
-  
-  // Get unique statuses and priorities from the data for filter options
+  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
+
+  const handleToggleRow = (orderId: string) => {
+    const newExpandedRows = new Set(expandedRows);
+    if (newExpandedRows.has(orderId)) {
+      newExpandedRows.delete(orderId);
+    } else {
+      newExpandedRows.add(orderId);
+    }
+    setExpandedRows(newExpandedRows);
+  };
+
   const uniqueStatuses = useMemo(() => Array.from(new Set(orders.map(o => o.order_status))), [orders]);
   const uniquePriorities = useMemo(() => Array.from(new Set(orders.map(o => o.priority))), [orders]);
 
@@ -88,7 +86,7 @@ const OrdersTable: React.FC<OrdersTableProps> = ({ orders }) => {
   return (
     <div className="">
         {/* --- FILTER CONTROLS --- */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6 p-4 bg-gray-50 rounded-lg border border-gray-300">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
             {/* Customer Search */}
             <div className="relative">
                 <label htmlFor="customer-search" className="text-sm font-medium text-gray-600 block mb-1">Customer</label>
@@ -99,7 +97,7 @@ const OrdersTable: React.FC<OrdersTableProps> = ({ orders }) => {
                     value={customerFilter}
                     onChange={(e) => setCustomerFilter(e.target.value)}
                     placeholder="Search by customer..."
-                    className="w-full pl-10 pr-4 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+                    className="w-full pl-10 pr-4 py-2 border rounded-md focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition"
                 />
             </div>
             
@@ -110,7 +108,7 @@ const OrdersTable: React.FC<OrdersTableProps> = ({ orders }) => {
                     id="status-filter"
                     value={statusFilter}
                     onChange={(e) => setStatusFilter(e.target.value as OrderStatus | "")}
-                    className="w-full p-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition bg-white"
+                    className="w-full p-2 border rounded-md focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition bg-white"
                 >
                     <option value="">All Statuses</option>
                     {uniqueStatuses.map(status => (
@@ -128,7 +126,7 @@ const OrdersTable: React.FC<OrdersTableProps> = ({ orders }) => {
                     id="priority-filter"
                     value={priorityFilter}
                     onChange={(e) => setPriorityFilter(e.target.value as OrderPriority | "")}
-                    className="w-full p-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition bg-white"
+                    className="w-full p-2 border rounded-md focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition bg-white"
                 >
                     <option value="">All Priorities</option>
                     {uniquePriorities.map(priority => (
@@ -156,6 +154,7 @@ const OrdersTable: React.FC<OrdersTableProps> = ({ orders }) => {
             <table className="w-full border-collapse">
                 <thead>
                     <tr className="text-left text-gray-500 text-sm border-b">
+                        <th className="py-3 px-2 w-12"></th>
                         <th className="py-3 px-4">ORDER ID</th>
                         <th className="py-3 px-4">CUSTOMER</th>
                         <th className="py-3 px-4">STATUS</th>
@@ -163,42 +162,56 @@ const OrdersTable: React.FC<OrdersTableProps> = ({ orders }) => {
                         <th className="py-3 px-4">PRIORITY</th>
                         <th className="py-3 px-4">TOTAL</th>
                         <th className="py-3 px-4">DUE DATE</th>
-                        <th className="py-3 px-4">ACTIONS</th>
                     </tr>
                 </thead>
                 <tbody>
                     {filteredOrders.length > 0 ? (
-                        filteredOrders.map((order) => (
-                            <tr key={order.id} className="border-b hover:bg-gray-50 transition-colors">
-                                <td className="py-3 px-4 font-semibold text-gray-700">{order.id.substring(0, 8)}...</td>
-                                <td className="py-3 px-4 text-gray-600">{order.company_name}</td>
-                                <td className="py-3 px-4">
-                                    <span className={`px-3 py-1 rounded-full text-xs font-medium capitalize ${statusColors[order.order_status]}`}>
-                                        {order.order_status.replace('_', ' ')}
-                                    </span>
-                                </td>
-                                <td className="py-3 px-4">
-                                    <span className="px-3 py-1 rounded-full bg-gray-100 text-gray-600 text-xs font-medium">
-                                        {order.candidate_count}
-                                    </span>
-                                </td>
-                                <td className="py-3 px-4">
-                                    <span className={`px-3 py-1 rounded-full text-xs font-medium capitalize ${priorityColors[order.priority]}`}>
-                                        {order.priority}
-                                    </span>
-                                </td>
-                                <td className="py-3 px-4 font-semibold text-gray-700">{formatCurrency(order.cost, order.currency)}</td>
-                                <td className="py-3 px-4 text-gray-600">{formatDate(order.due_date)}</td>
-                                <td className="py-3 px-4 flex gap-2">
-                                    <button className="text-gray-500 hover:text-blue-600 transition-colors p-1 rounded-full hover:bg-blue-100">
-                                        <Eye size={18} />
-                                    </button>
-                                    <button className="text-gray-500 hover:text-green-600 transition-colors p-1 rounded-full hover:bg-green-100">
-                                        <Edit size={18} />
-                                    </button>
-                                </td>
-                            </tr>
-                        ))
+                        filteredOrders.map((order) => {
+                            const isExpanded = expandedRows.has(order.id);
+                            return (
+                                <Fragment key={order.id}>
+                                    <tr className="border-b hover:bg-gray-50 transition-colors">
+                                        <td className="py-3 px-2 text-center">
+                                            {order.suborders && order.suborders.length > 0 && (
+                                                <button
+                                                  onClick={() => handleToggleRow(order.id)}
+                                                  className="p-1 rounded-full hover:bg-gray-200 transition-colors"
+                                                  aria-label="Toggle sub-orders"
+                                                >
+                                                    <ChevronDown
+                                                        size={18}
+                                                        className={`transform transition-transform duration-200 ${
+                                                          isExpanded ? "rotate-180" : "rotate-0"
+                                                        }`}
+                                                    />
+                                                </button>
+                                            )}
+                                        </td>
+                                        <td className="py-3 px-4 font-semibold text-gray-700">{order.id.substring(0, 8)}...</td>
+                                        <td className="py-3 px-4 text-gray-600">{order.company_name}</td>
+                                        <td className="py-3 px-4">
+                                            <span className={`px-3 py-1 rounded-full text-xs font-medium capitalize ${statusColors[order.order_status]}`}>
+                                                {order.order_status.replace('_', ' ')}
+                                            </span>
+                                        </td>
+                                        <td className="py-3 px-4">
+                                            <span className="px-3 py-1 rounded-full bg-gray-100 text-gray-600 text-xs font-medium">
+                                                {order.candidate_count}
+                                            </span>
+                                        </td>
+                                        <td className="py-3 px-4">
+                                            <span className={`px-3 py-1 rounded-full text-xs font-medium capitalize ${priorityColors[order.priority]}`}>
+                                                {order.priority}
+                                            </span>
+                                        </td>
+                                        <td className="py-3 px-4 font-semibold text-gray-700">{formatCurrency(order.cost, order.currency)}</td>
+                                        <td className="py-3 px-4 text-gray-600">{formatDate(order.due_date)}</td>
+                                    </tr>
+                                    {/* MODIFIED: Replaced inline table with the new component */}
+                                    {isExpanded && <SubOrdersTable suborders={order.suborders} parentOrderId={order.id} />}
+                                </Fragment>
+                            )
+                        })
                     ) : (
                          <tr>
                             <td colSpan={8} className="text-center py-10 text-gray-500">

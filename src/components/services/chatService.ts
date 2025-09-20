@@ -18,8 +18,9 @@ export function streamAgenticResponse(prompt: string, callbacks: StreamingCallba
   };
 
   const updateAndNotify = () => callbacks.onUpdate({ ...currentTurn });
-  const user_role = "company_admin";
-  const company_name = "Rodriguez, Figueroa and Sanchez";
+  const user_role = "hr";
+  const user_id = "56188949-797a-481d-bbae-698e0ef99c3f"
+  const company_id = "d8a4811f-8e32-4e59-a998-d5ce3a642ed6";
   let closed = false;
   fetchEventSource("http://localhost:8000/query-stream", {
     method: "POST",
@@ -32,7 +33,8 @@ export function streamAgenticResponse(prompt: string, callbacks: StreamingCallba
       query: prompt,
       save_history: true,
       user_role: user_role,
-      company_name : company_name
+      user_id: user_id,
+      company_id : company_id
     }),
     async onopen(response) {
       if (response.ok) {
