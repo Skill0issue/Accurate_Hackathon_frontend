@@ -49,12 +49,8 @@ const transformToCanvasData = (data: AssistantCanvasData | null): CanvasData | n
   if (mainContent.length === 0) return null;
 
   return {
-    // ✅ Title comes only from canvas_title
     title: (data as any).canvas_title || "Data Visualization",
-
     mainContent,
-
-    // ✅ Key Insights summary comes only from insight_text (no duplication)
     keyInsights: {
       summary: data.insight_text || "Here are the key insights from your data.",
       dataQuality: (data as any).data_quality || undefined,
@@ -74,14 +70,12 @@ export default function ChatExperience() {
 
   const streamConnection = useRef<(() => void) | null>(null);
 
-  // Debug incoming canvas payloads
   useEffect(() => {
     if (rawCanvasData) {
       console.log("[ChatExperience] rawCanvasData received:", rawCanvasData);
     }
   }, [rawCanvasData]);
 
-  // Handle assistant streaming updates
   useEffect(() => {
     if (!assistantTurn) return;
 
@@ -131,19 +125,16 @@ export default function ChatExperience() {
     setIsCanvasAvailable(false);
     setRawCanvasData(null);
 
-    streamConnection.current = streamAgenticResponse(text, {
+    streamConnection.current = streamAgenticResponse(text,
+      {
       onUpdate: (turn) => setAssistantTurn(turn),
       onComplete: (turn) => {
         setIsLoading(false);
-        setAssistantTurn(null);
-        streamConnection.current = null;
-
-        console.log("Canvas data from backend:", turn.canvasData);
 
         const finalMessage: ChatMessage = {
           role: "assistant",
           time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-          parts: [{ type: "markdown", content: turn.finalResponse || "No response." }], // Changed to markdown
+          parts: [{ type: "markdown", content: turn.finalResponse || "No response." }],
         };
 
         if (turn.canvasData) {
@@ -151,10 +142,16 @@ export default function ChatExperience() {
           setIsCanvasAvailable(true);
         }
 
+        // CORRECTED LOGIC:
+        // 1. Add the final, static message to the chat history.
         setSession((s) => ({
           ...s!,
           messages: [...s!.messages, finalMessage],
         }));
+
+        // 2. Clear the live streaming component *after* the final message is stored.
+        setAssistantTurn(null);
+        streamConnection.current = null;
       },
       onError: (err) => {
         setIsLoading(false);
@@ -198,8 +195,8 @@ export default function ChatExperience() {
         </FullScreenChat>
       )}
 
-      <div className="fixed bottom-6 left-0 right-0 z-40 flex items-center justify-center pointer-events-none">
-        <div className="flex items-end gap-4 pointer-events-auto">
+      <div className="fixed bottom-1 p-4 w-full right-0 z-40 flex items-center justify-center bg-white/15 pointer-events-none backdrop-blur-sm">
+        <div className="flex w-1/3 mx-auto justify-center backdrop-blur-md items-center gap-4 pointer-events-auto">
           {session?.status === "minimized" && (
             <DockedChatIcon onExpand={handleToggleSession} onEndChat={handleEndChat} />
           )}
@@ -217,3 +214,4 @@ export default function ChatExperience() {
     </>
   );
 }
+

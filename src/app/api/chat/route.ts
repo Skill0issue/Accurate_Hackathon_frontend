@@ -12,24 +12,23 @@ export async function GET(request: Request) {
       return new Response(JSON.stringify({ error: 'Prompt is required' }), { status: 400 });
     }
 
-    const flaskBackendUrl = process.env.FLASK_BACKEND_URL;
+    const flaskBackendUrl = process.env.FLASK_BACKEND_URL + '/chatbot/query-stream';
 
     if (!flaskBackendUrl) {
       console.error("FLASK_BACKEND_URL is not defined in environment variables.");
       return new Response(JSON.stringify({ error: "Application is not configured to connect to the chat service." }), { status: 500 });
     }
 
-    const flaskResponse = await fetch(flaskBackendUrl, {
-      method: 'POST',
+    // MODIFIED: Construct a GET request with URL parameters
+    const backendUrl = new URL(`${flaskBackendUrl}/chatbot/query-stream`);
+    backendUrl.searchParams.append('query', prompt);
+    backendUrl.searchParams.append('save_history', 'true');
+
+    const flaskResponse = await fetch(backendUrl.toString(), {
+      method: 'GET',
       headers: {
-        'Content-Type': 'application/json',
         'Accept': 'text/event-stream',
       },
-      // MODIFIED: The body now matches the required format from your backend.
-      body: JSON.stringify({ 
-        query: prompt,
-        save_history: true 
-      }),
     });
 
     if (!flaskResponse.ok || !flaskResponse.body) {
@@ -69,4 +68,3 @@ export async function GET(request: Request) {
     return new Response(JSON.stringify({ error: "Failed to connect to the chat service.", details: errorMessage }), { status: 500 });
   }
 }
-
