@@ -27,7 +27,7 @@ const ThinkingComponent: React.FC<ThinkingComponentProps> = ({
   className = "" 
 }) => {
   const [showThinking, setShowThinking] = useState(false);
-
+  // console.log(thinking.steps);
   return (
     <div className={className}>
       {/* Thinking Button */}

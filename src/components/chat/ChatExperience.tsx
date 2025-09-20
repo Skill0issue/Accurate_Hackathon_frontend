@@ -8,7 +8,6 @@ import { VisualCanvas } from "../canvas/VisualCanvas";
 import { ChatMessage, AssistantCanvasData, CanvasData, ChatSession, MessagePart } from "./types";
 import { AssistantTurn } from "./streamTypes";
 import { streamAgenticResponse } from "@/components/services/chatService";
-import { AgenticResponse } from "./streaming/AgenticResponse";
 
 /**
  * Transforms raw canvas data from backend into structured CanvasData
@@ -31,7 +30,6 @@ const transformToCanvasData = (data: AssistantCanvasData | null): CanvasData | n
     return rawUrl;
   };
 
-  // Handle charts
   if (data.charts?.length) {
     data.charts.forEach((url) => {
       const resolved = resolveChartUrl(url);
@@ -39,7 +37,6 @@ const transformToCanvasData = (data: AssistantCanvasData | null): CanvasData | n
     });
   }
 
-  // Handle tables
   if (data.table?.length) {
     const headers = Object.keys(data.table[0]);
     const rows = data.table.map((item) => headers.map((header) => item[header]));
@@ -61,41 +58,14 @@ const transformToCanvasData = (data: AssistantCanvasData | null): CanvasData | n
 
 export default function ChatExperience() {
   const [session, setSession] = useState<ChatSession | null>(null);
-  const [rawCanvasData, setRawCanvasData] = useState<AssistantCanvasData | null>(null);
+  // MODIFIED: This state now holds the canvas data for the *currently selected* message, not just the live one.
+  const [activeCanvasData, setActiveCanvasData] = useState<AssistantCanvasData | null>(null);
   const [isCanvasOpen, setIsCanvasOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [assistantTurn, setAssistantTurn] = useState<AssistantTurn | null>(null);
   const [isCanvasAvailable, setIsCanvasAvailable] = useState(false);
 
   const streamConnection = useRef<(() => void) | null>(null);
-
-  useEffect(() => {
-    if (rawCanvasData) {
-      console.log("[ChatExperience] rawCanvasData received:", rawCanvasData);
-    }
-  }, [rawCanvasData]);
-
-  useEffect(() => {
-    if (!assistantTurn) return;
-
-    if (assistantTurn.canvasData) {
-      setRawCanvasData(assistantTurn.canvasData as AssistantCanvasData);
-      setIsCanvasAvailable(true);
-      console.log("[ChatExperience] assistantTurn.canvasData set from streaming update");
-      return;
-    }
-
-    const flag = (assistantTurn as any).canvasFlag;
-    if (flag) {
-      setIsCanvasAvailable(true);
-      console.log("[ChatExperience] assistantTurn.canvasFlag true (waiting for final_payload)");
-    }
-
-    if ((assistantTurn as any).assets) {
-      console.log("[ChatExperience] assistantTurn.assets:", (assistantTurn as any).assets);
-    }
-  }, [assistantTurn]);
 
   useEffect(() => {
     return () => {
@@ -109,8 +79,14 @@ export default function ChatExperience() {
     handleSendMessage(text, newSession);
   };
 
+  // MODIFIED: This function now sets the canvas data to be viewed and opens the modal.
+  const handleOpenCanvas = (canvasData: AssistantCanvasData) => {
+    setActiveCanvasData(canvasData);
+    setIsCanvasOpen(true);
+  };
+
   const handleSendMessage = async (text: string, currentSession = session) => {
-    if (!text.trim() || !currentSession) return;
+    if (!text.trim() || !currentSession || isLoading) return;
     if (streamConnection.current) streamConnection.current();
 
     const userMessage: ChatMessage = {
@@ -119,51 +95,72 @@ export default function ChatExperience() {
       time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
     };
 
-    setSession({ ...currentSession, messages: [...currentSession.messages, userMessage] });
+    // MODIFIED: Create a placeholder for the assistant's rich response.
+    const assistantMessagePlaceholder: ChatMessage = {
+      role: "assistant",
+      time: "...",
+      parts: [{ type: "agentic_turn", data: { agentSteps: [], isComplete: false, plan: "Thinking..." } }]
+    };
+
+    setSession({
+      ...currentSession,
+      messages: [...currentSession.messages, userMessage, assistantMessagePlaceholder]
+    });
+    
     setIsLoading(true);
     setError(null);
-    setIsCanvasAvailable(false);
-    setRawCanvasData(null);
+    setIsCanvasAvailable(false); // Reset canvas availability for the new message
 
     streamConnection.current = streamAgenticResponse(text,
       {
-      onUpdate: (turn) => setAssistantTurn(turn),
+      onUpdate: (turn) => {
+        setSession(s => {
+          if (!s) return s;
+          const newMessages = [...s.messages];
+          const lastMessage = newMessages[newMessages.length - 1];
+          if (lastMessage?.role === 'assistant') {
+            lastMessage.parts = [{ type: 'agentic_turn', data: turn }];
+            // The canvas is available if the streaming turn indicates it
+            if (turn.canvasData || (turn as any).canvasFlag) {
+              setIsCanvasAvailable(true);
+            }
+          }
+          return { ...s, messages: newMessages };
+        });
+      },
       onComplete: (turn) => {
         setIsLoading(false);
-
-        const finalMessage: ChatMessage = {
-          role: "assistant",
-          time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-          parts: [{ type: "markdown", content: turn.finalResponse || "No response." }],
-        };
-
-        if (turn.canvasData) {
-          setRawCanvasData(turn.canvasData);
-          setIsCanvasAvailable(true);
-        }
-
-        // CORRECTED LOGIC:
-        // 1. Add the final, static message to the chat history.
-        setSession((s) => ({
-          ...s!,
-          messages: [...s!.messages, finalMessage],
-        }));
-
-        // 2. Clear the live streaming component *after* the final message is stored.
-        setAssistantTurn(null);
         streamConnection.current = null;
+        
+        // MODIFIED: Finalize the last message by saving the complete turn data.
+        setSession(s => {
+          if (!s) return s;
+          const newMessages = [...s.messages];
+          const lastMessage = newMessages[newMessages.length - 1];
+          if (lastMessage?.role === 'assistant') {
+            lastMessage.parts = [{ type: "agentic_turn", data: { ...turn, isComplete: true } }];
+            lastMessage.time = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+          }
+          return { ...s, messages: newMessages };
+        });
       },
       onError: (err) => {
         setIsLoading(false);
         setError(err.message);
-        setAssistantTurn(null);
         streamConnection.current = null;
+        
+        setSession(s => {
+          if (!s) return s;
+          const newMessages = [...s.messages];
+          const lastMessage = newMessages[newMessages.length - 1];
+          if (lastMessage?.role === 'assistant') {
+             lastMessage.parts = [{ type: "markdown", content: `An error occurred: ${err.message}` }];
+             lastMessage.time = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+          }
+          return { ...s, messages: newMessages };
+        });
       },
     });
-  };
-
-  const handleOpenCanvas = () => {
-    setIsCanvasOpen(true);
   };
 
   const handleToggleSession = () => {
@@ -178,7 +175,7 @@ export default function ChatExperience() {
     setIsCanvasOpen(false);
   };
 
-  const canvasToRender = transformToCanvasData(rawCanvasData);
+  const canvasToRender = transformToCanvasData(activeCanvasData);
 
   return (
     <>
@@ -188,10 +185,10 @@ export default function ChatExperience() {
           onMinimize={handleToggleSession}
           onSend={handleSendMessage}
           onOpenCanvas={handleOpenCanvas}
-          isCanvasAvailable={isCanvasAvailable}
+          isCanvasAvailable={isCanvasAvailable} // This might now be redundant or need rethinking
           isLoading={isLoading}
         >
-          {assistantTurn && <AgenticResponse turn={assistantTurn} onOpenCanvas={() => setIsCanvasOpen(true)} />}
+          {/* No children needed, MessageArea handles everything */}
         </FullScreenChat>
       )}
 

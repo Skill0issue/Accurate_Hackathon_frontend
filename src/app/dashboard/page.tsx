@@ -14,50 +14,51 @@ import { Order } from "@/components/orders/types";
 
 export default function DashboardPage() {
 
-    const sampleOrders: Order[] = [
-        {
-            id: "ORD-001",
-            company_name: "Acme Corporation",
-            order_status: "in_progress",
-            candidate_count: 3,
-            priority: "high",
-            cost: 2450.00,
-            currency: "USD",
-            due_date: "2024-01-15"
-        },
-        {
-            id: "ORD-002",
-            company_name: "Tech Solutions Inc",
-            order_status: "completed",
-            candidate_count: 1,
-            priority: "medium",
-            cost: 890.00,
-            currency: "USD",
-            due_date: "2024-01-14"
-        },
-        {
-            id: "ORD-003",
-            company_name: "Global Enterprises",
-            order_status: "pending",
-            candidate_count: 5,
-            priority: "high",
-            cost: 5670.00,
-            currency: "USD",
-            due_date: "2024-01-13"
-        },
-        {
-            id: "ORD-004",
-            company_name: "StartUp Hub",
-            order_status: "in_progress",
-            candidate_count: 2,
-            priority: "low",
-            cost: 1200.00,
-            currency: "USD",
-            due_date: "2024-01-12"
-        },
-    ];
+    // const sampleOrders: Order[] = [
+    //     {
+    //         id: "ORD-001",
+    //         company_name: "Acme Corporation",
+    //         order_status: "in_progress",
+    //         candidate_count: 3,
+    //         priority: "high",
+    //         cost: 2450.00,
+    //         currency: "USD",
+    //         due_date: "2024-01-15"
+    //     },
+    //     {
+    //         id: "ORD-002",
+    //         company_name: "Tech Solutions Inc",
+    //         order_status: "completed",
+    //         candidate_count: 1,
+    //         priority: "medium",
+    //         cost: 890.00,
+    //         currency: "USD",
+    //         due_date: "2024-01-14"
+    //     },
+    //     {
+    //         id: "ORD-003",
+    //         company_name: "Global Enterprises",
+    //         order_status: "pending",
+    //         candidate_count: 5,
+    //         priority: "high",
+    //         cost: 5670.00,
+    //         currency: "USD",
+    //         due_date: "2024-01-13"
+    //     },
+    //     {
+    //         id: "ORD-004",
+    //         company_name: "StartUp Hub",
+    //         order_status: "in_progress",
+    //         candidate_count: 2,
+    //         priority: "low",
+    //         cost: 1200.00,
+    //         currency: "USD",
+    //         due_date: "2024-01-12"
+    //     },
+    // ];
 
     const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+
     // State for live orders, loading status, and potential errors
     const [orders, setOrders] = useState<Order[]>([]);
     const [isLoading, setIsLoading] = useState(false);
@@ -65,7 +66,7 @@ export default function DashboardPage() {
 
     const handleToggleSidebar = () => setIsSidebarOpen((prev) => !prev);
 
-    // useEffect hook to fetch data from the API when the component mounts
+    // useEffect hook to fetch orders data from the API when the component mounts
     useEffect(() => {
         const fetchOrders = async () => {
             try {
@@ -79,9 +80,9 @@ export default function DashboardPage() {
         };
 
         fetchOrders();
-    }, []); // Empty dependency array means this runs once on mount
+    }, []);
 
-    // Dynamically calculate stats from the live order data
+    // stats from the live order data
     const totalOrders = orders.length;
     const inProgressOrders = orders.filter(o => o.order_status === 'in_progress').length;
     const pendingOrders = orders.filter(o => o.order_status === 'pending').length;

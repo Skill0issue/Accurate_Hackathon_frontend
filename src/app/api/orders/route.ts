@@ -1,25 +1,23 @@
 import { NextResponse } from 'next/server';
-import mysql from 'mysql2/promise'; // Using 'mysql2/promise' for async/await support
+import mysql from 'mysql2/promise';
 
 // --- DATABASE CONNECTION ---
-// The connection details are read from environment variables for security.
-// The mysql2 library uses a connection URL format similar to pg.
 const pool = mysql.createPool({
   uri: process.env.DATABASE_URL,
 });
 
 /**
  * Handles GET requests to /api/orders.
- * It queries the MySQL database for recent orders and returns them.
+ * It queries the MySQL database for recent orders, fetches their associated suborders
+ * including the subject name, and returns them as a nested JSON object.
  */
 export async function GET() {
   let connection;
   try {
     connection = await pool.getConnection();
 
-    // --- SQL QUERY (This query is standard and works for MySQL) ---
-    // It joins the 'orders' table with the 'companies' table to get all necessary fields.
-    const query = `
+    // --- STEP 1: FETCH MAIN ORDERS ---
+    const ordersQuery = `
       SELECT
         o.id,
         c.company_name,
@@ -28,34 +26,73 @@ export async function GET() {
         o.priority,
         o.cost,
         o.currency,
-        o.due_date
+        o.due_date,
+        o.order_package_id
       FROM
         orders AS o
       JOIN
         companies AS c ON o.company_id = c.id
       ORDER BY
         o.created_at DESC
-      LIMIT 50;
+      LIMIT 500;
     `;
-
-    const [rows] = await connection.query(query);
+    const [orders]: [any[], any] = await connection.query(ordersQuery);
     
-    // Return the fetched data as a JSON response with a 200 OK status.
-    return NextResponse.json(rows);
+    if (orders.length === 0) {
+      return NextResponse.json([]);
+    }
+
+    // --- STEP 2: FETCH SUBORDERS FOR THE ORDERS ---
+    const orderIds = orders.map(order => order.id);
+
+    // MODIFIED: This query now joins with the 'subjects' table to get the subject name.
+    // It uses 'LEFT JOIN' to ensure sub-orders are still returned even if they don't have a linked subject.
+    // It renames 'subjects.name' to 'subject_name' to match the frontend component's expectation.
+    const subordersQuery = `
+      SELECT
+        so.id,
+        so.order_id,
+        s.name AS subject_name, -- Fetched from subjects table and aliased
+        so.sub_order_status,
+        so.priority,
+        so.due_date,
+        so.notes
+      FROM
+        sub_orders AS so
+      LEFT JOIN
+        subjects AS s ON so.subject_id = s.id
+      WHERE
+        so.order_id IN (?);
+    `;
+    const [suborders]: [any[], any] = await connection.query(subordersQuery, [orderIds]);
+
+    // --- STEP 3: MAP SUBORDERS TO THEIR PARENT ORDER ---
+    const subordersMap = new Map<number, any[]>();
+    for (const suborder of suborders) {
+      if (!subordersMap.has(suborder.order_id)) {
+        subordersMap.set(suborder.order_id, []);
+      }
+      subordersMap.get(suborder.order_id)!.push(suborder);
+    }
+
+    // --- STEP 4: COMBINE ORDERS AND SUBORDERS ---
+    const ordersWithSuborders = orders.map(order => ({
+      ...order,
+      suborders: subordersMap.get(order.id) || [],
+    }));
+    
+    return NextResponse.json(ordersWithSuborders);
 
   } catch (error) {
     console.error('Failed to fetch orders from MySQL database:', error);
-    // If an error occurs, return a JSON response with a 500 Internal Server Error status.
     return NextResponse.json(
       { error: "Internal Server Error", message: "Could not fetch orders." },
       { status: 500 }
     );
   } finally {
-    // Ensure the database connection is always released back to the pool
     if (connection) {
       connection.release();
     }
   }
 }
-
 
