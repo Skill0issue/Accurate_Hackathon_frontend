@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import Sidebar from './Sidebar';
+import ChatExperience from '../chat/ChatBot';
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -28,6 +29,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       >
         <div className="p-6">
           {children}
+          <ChatExperience />
         </div>
       </motion.main>
     </div>
